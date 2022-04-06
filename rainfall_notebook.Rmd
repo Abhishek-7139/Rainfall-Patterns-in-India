@@ -1,0 +1,114 @@
+# Visualization of Rainfall Patterns in India
+
+##### By:- Nalin Semwal 2019UCO1505, Abhishek Jha 2019UCO1514, Kartik Goyal 2019UCO1516
+
+------------------------------------------------------------------------
+
+### Average annual rainfall across India
+We are using 5 R packages to aid in our visualization: ggplot2, maptools, rgeos and dplyr We are using ggplot2 to plot the graphs and map on to the screen. In order to deal with shape files (.shp), that includes reading them and converting them into dataframes suitable for ggplot2, we are using maptools and rgeos. dplyr and tidyr are being used for basic data manipulation functions.
+
+```{r loading-libraries, message=FALSE, results=FALSE}
+defaultW <- getOption("warn") 
+options(warn = -1) #Suspend warnings
+
+library(ggplot2)
+library(maptools)
+library(rgeos)
+library(dplyr)
+library(tidyr)
+```
+
+We found the appropriate Indian geo-spatial shape file with state boundaries from the [Data{Meet}](http://projects.datameet.org/maps/) community project. We read in the shape file and then convert it to a dataframe using the fortify function. We then rename the id column (used to identify states) to a more appropriate ST_UT_NM column. Also, we capitalize the names of the states and UT to avoid any differences in casing leading to errors when we join it with the rainfall data set later.
+
+```{r loading-mapdata}
+#Read in shape file of the state boundary map
+india.shape <- 
+  readShapeSpatial("./maps-master/States/Admin2.shp")
+
+#Convert shape file to a dataframe
+india.fortify <- 
+  fortify(india.shape, region = "ST_NM")
+#Capitalize the names of the states and UTs and also renamed column from id to ST_UT_NM
+india.fortify$id = toupper(india.fortify$id)
+colnames(india.fortify)[6] <- "ST_UT_NM"
+```
+
+We then load the district wise rainfall data set. This data set contains monthly rainfall details of 36 meteorological sub-divisions of India (the sates and the UTs) at district level and monthly granularity. The data has been normalized using observations from 1901-2015.
+
+*Since the administrative map of India has changed from 2015, some pre-processing has been done to make the data set match the divisions in the fortified data set of the Indian state boundaries.*
+
+After loading the data set, the column containing the state and UT names is renamed and the values of the column capitalized. Since we are interested in performing analysis at the state level, we need to aggregate the district level data into a single row for each state. We use the dplyr package functions and syntax to group the data set instances by ST_UT_NM, and condense or summarize each group into a single row where each column is aggregated by the sum function.
+
+```{r loading-and-transforming-rainfall-data}
+#Load rainfall dataset, capitalize state names and rename column to ST_UT_NM
+ds = read.csv("./dataset/district wise rainfall normal.csv")
+colnames(ds)[1] <- "ST_UT_NM"
+ds$ST_UT_NM = toupper(ds$ST_UT_NM)
+
+#Create a dataset with data at only the state level by aggregating the values grouped by ST_UT_NAME
+ds.state <- 
+  ds %>%
+  group_by(ST_UT_NM) %>%
+  summarize_at(colnames(ds)[3:15], mean)
+```
+
+We then merge the two data sets by using the merge function provided in the R base package. The merge function performs an inner join on the two data sets using the ST_UT_NM fields. However we also specify all.x as true. This makes it a left join between `india.fortify` and `ds.state`
+
+```{r merging-dataframes}
+#Merge the fortified map data with the rainfall data and order it.
+india.raindata <- merge(india.fortify, ds.state, by="ST_UT_NM", all.x=TRUE)
+india.raindata <- india.raindata[order(india.raindata$order),]
+```
+
+Finally we can plot the unified data set using the ggplot function
+
+```{r plotting-annual-rainfall}
+#Plot Map of Annual Rainfall in India
+ggplot()+
+  geom_polygon(data = india.raindata,
+               aes(x = long, y = lat, group=group, fill=ANNUAL), color="black")+
+  scale_fill_gradient(name="Rainfall (mm)", low="white", high="blue")+
+  labs(title="Average Annual Rainfall in States and UTs of India")+
+  theme_linedraw()
+
+options(warn = defaultW) #Reset warnings preference
+```
+
+### Average rainfall across India according to Seasons
+We can further breakdown the annual data and look at the rainfall across India over the course of the seasons.
+
+The seasonal data is derived from the monthly data by aggregating months, in groups of 3, into 4 seasons as follows:
+- December, January and February as Winter
+- March, April, May as Summer
+- June, July, August as Monsoon
+- September, October, November as Autumn
+
+```{r grouping-annual-data-into-seasons}
+ds.state.seasons <- ds.state[, "ST_UT_NM"]
+ds.state.seasons$Winter = rowSums(ds.state[, c("DEC", "JAN", "FEB")])
+ds.state.seasons$Summer = rowSums(ds.state[, c("MAR", "APR", "MAY")])
+ds.state.seasons$Monsoon = rowSums(ds.state[, c("JUN", "JUL", "AUG")])
+ds.state.seasons$Autumn = rowSums(ds.state[, c("SEP", "OCT", "NOV")])
+```
+We then reshape the `ds.state.seasons` data frame to have a single Rainfall column but each row is qualified by a Season value.
+
+```{r Reshaping-into-longer-dataframe}
+#Transform the state data into season: rainfall key-value pair for all 4 seasons for each state
+ds.state.seasons <- ds.state.seasons %>%
+  pivot_longer(cols=colnames(ds.state.seasons)[2:5], names_to = "Season", values_to="Rainfall")
+```
+We then merge the seasonal data set to the map data.
+```{r merging-seasonal-data-with-map-data}
+india.seasons.merged <- merge(india.fortify, ds.state.seasons, by="ST_UT_NM", all.x=TRUE)
+india.seasons.merged <- india.seasons.merged[order(india.seasons.merged$order),]
+```
+We are now ready to plot the seasonal rainfall data using `geom_polygon`.
+```{r plotting-seasonal-data}
+ggplot()+
+  geom_polygon(data = india.seasons.merged[!is.na(india.seasons.merged$Season),],
+               aes(x = long, y = lat, group=group, fill=Rainfall), color="black")+
+  scale_fill_gradient(name="Rainfall (mm)", low = 'white', high = 'blue')+
+  labs(title="Seasonal Rainfall in States and UTs of India")+
+  facet_wrap(~Season)+
+  theme_linedraw()
+```
