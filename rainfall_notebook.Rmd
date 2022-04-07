@@ -5,6 +5,7 @@
 ------------------------------------------------------------------------
 
 ### Average annual rainfall across India
+
 We are using 5 R packages to aid in our visualization: ggplot2, maptools, rgeos and dplyr We are using ggplot2 to plot the graphs and map on to the screen. In order to deal with shape files (.shp), that includes reading them and converting them into dataframes suitable for ggplot2, we are using maptools and rgeos. dplyr and tidyr are being used for basic data manipulation functions.
 
 ```{r loading-libraries, message=FALSE, results=FALSE}
@@ -75,13 +76,10 @@ options(warn = defaultW) #Reset warnings preference
 ```
 
 ### Average rainfall across India according to Seasons
+
 We can further breakdown the annual data and look at the rainfall across India over the course of the seasons.
 
-The seasonal data is derived from the monthly data by aggregating months, in groups of 3, into 4 seasons as follows:
-- December, January and February as Winter
-- March, April, May as Summer
-- June, July, August as Monsoon
-- September, October, November as Autumn
+The seasonal data is derived from the monthly data by aggregating months, in groups of 3, into 4 seasons as follows: - December, January and February as Winter - March, April, May as Summer - June, July, August as Monsoon - September, October, November as Autumn
 
 ```{r grouping-annual-data-into-seasons}
 ds.state.seasons <- ds.state[, "ST_UT_NM"]
@@ -90,6 +88,7 @@ ds.state.seasons$Summer = rowSums(ds.state[, c("MAR", "APR", "MAY")])
 ds.state.seasons$Monsoon = rowSums(ds.state[, c("JUN", "JUL", "AUG")])
 ds.state.seasons$Autumn = rowSums(ds.state[, c("SEP", "OCT", "NOV")])
 ```
+
 We then reshape the `ds.state.seasons` data frame to have a single Rainfall column but each row is qualified by a Season value.
 
 ```{r Reshaping-into-longer-dataframe}
@@ -97,12 +96,16 @@ We then reshape the `ds.state.seasons` data frame to have a single Rainfall colu
 ds.state.seasons <- ds.state.seasons %>%
   pivot_longer(cols=colnames(ds.state.seasons)[2:5], names_to = "Season", values_to="Rainfall")
 ```
+
 We then merge the seasonal data set to the map data.
+
 ```{r merging-seasonal-data-with-map-data}
 india.seasons.merged <- merge(india.fortify, ds.state.seasons, by="ST_UT_NM", all.x=TRUE)
 india.seasons.merged <- india.seasons.merged[order(india.seasons.merged$order),]
 ```
+
 We are now ready to plot the seasonal rainfall data using `geom_polygon`.
+
 ```{r plotting-seasonal-data}
 ggplot()+
   geom_polygon(data = india.seasons.merged[!is.na(india.seasons.merged$Season),],
@@ -110,5 +113,38 @@ ggplot()+
   scale_fill_gradient(name="Rainfall (mm)", low = 'white', high = 'blue')+
   labs(title="Seasonal Rainfall in States and UTs of India")+
   facet_wrap(~Season)+
+  theme_linedraw()
+```
+
+### Comparing Average Monthly Rainfall in Regions of India
+
+##### (representative states stand in for regions)
+
+We can plot line graphs on top of each other to conveniently compare (comparisons can be better made with superimposed plots) rainfall in broader regions of India over the course of a year. This gives us a general idea of the relative trends.
+
+The regions are broadly meant to represent South, East, North, West and Center of India. Each region is represented by a stand in state decided to be a typical (close to the central value of rainfall in that region) state of that geographical region. The chosen states are: - \* ANDHRA PRADESH for South \* MADHYA PRADESH for Center \* MAHARASHTRA for West \* UTTARAKHAND for North \* WEST BENGAL for East
+
+```{r line-graph}
+ds.monthly <- ds.state[,colnames(ds.state)[1:13]]
+
+ds.monthly <- 
+  ds.monthly %>% 
+  pivot_longer(cols=colnames(ds.monthly)[2:13],
+               names_to = "Months",
+               values_to="Rainfall")
+
+monthOrder <- c("JAN","FEB","MAR","APR",
+                "MAY","JUN","JUL","AUG",
+                "SEP","OCT","NOV","DEC")
+ds.monthly$Months <- factor(ds.monthly$Months,
+                            levels = monthOrder)
+
+regionReps <-c("ANDHRA PRADESH", "MADHYA PRADESH", "UTTARAKHAND", "WEST BENGAL", "MAHARASHTRA")
+
+ds.monthly %>% filter(ST_UT_NM %in% regionReps) %>%
+  ggplot(aes(x=Months, y=Rainfall, group=ST_UT_NM))+
+  geom_line(aes(color=ST_UT_NM))+
+  labs(title="Month by Month Rainfall in Regions of India\n(Approximated by states)")+
+  ylab("Rainfall (mm)")+
   theme_linedraw()
 ```
