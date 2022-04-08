@@ -11,4 +11,9 @@ Notebook for this project can be found [here](https://master--precious-cucurucho
 
 ## Devops
 
-This project uses CI/CD by github Actions. Whenever a changes is committed, automatic build is made and deployed to the heroku platform.
+This project uses CI/CD by github Actions. Whenever a changes is committed, certain checks according netlify specifications are done an an automatic build is made.
+After build is succesful, it is deployed on the netlify platform.
+For every pull request, if the build is succesful, netlify provides deploy logs and deploy preview.
+
+All this is automated and collaborative development and deployment is being done.
+
