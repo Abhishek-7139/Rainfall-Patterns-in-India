@@ -7,13 +7,13 @@ Remember to change the path to the shapefile and the csv file according to your 
 
 ## Hosted website
 
-Notebook for this project can be found [here](https://master--precious-cucurucho-d3aeab.netlify.app/).
+Notebook for this project can be found [here](https://abhishek-7139.github.io/Rainfall-Patterns-in-India/).
 
 ## Devops
 
-This project uses CI/CD by github Actions. Whenever a changes is committed, certain checks according netlify specifications are done an an automatic build is made.
-After build is succesful, it is deployed on the netlify platform.
-For every pull request, if the build is succesful, netlify provides deploy logs and deploy preview.
+This project uses CI/CD by github Actions, deployment is done on GitHub Pages. 
+Whenever a change is committed, GitHub Actions are run. First build is made and then reports are generated and build is deployed.
+For every pull request, certain checks according to GitHub are done. If the PR is merged, actions are run again and hence latest version of the branch is deployed.
 
 All this is automated and collaborative development and deployment is being done.
 
