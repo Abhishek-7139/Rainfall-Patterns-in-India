@@ -13,7 +13,7 @@ Notebook for this project can be found [here](https://abhishek-7139.github.io/Ra
 
 This project uses CI/CD by github Actions, deployment is done on GitHub Pages. 
 Whenever a change is committed, GitHub Actions are run. First build is made and then reports are generated and build is deployed.
-For every pull request, certain checks according to GitHub are done. If the PR is merged, actions are run again and hence latest version of the branch is deployed.
+For every pull request, if the PR is merged, actions are run again and hence latest version of the branch is deployed.
 
 All this is automated and collaborative development and deployment is being done.
 
