@@ -1,5 +1,6 @@
-dataset
-maps-master
+R/dataset
+R/maps-master
+R/.Rproj.user
+R/.RData
+R/.Rhistory
 .Rproj.user
-.RData
-.Rhistory
